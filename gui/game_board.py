@@ -56,12 +56,18 @@ class GameBoard(tk.Frame):
         scrollable_frame = tk.Frame(canvas, bg="#f0f0f0")
 
         scrollable_frame.bind(
-            "<Configure>",
-            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+            "<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
         )
 
         canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
         canvas.configure(yscrollcommand=scrollbar.set)
+
+        # Enable mouse wheel scrolling
+        def _on_mousewheel(event):
+            canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
+
+        canvas.bind("<MouseWheel>", _on_mousewheel)
+        scrollable_frame.bind("<MouseWheel>", _on_mousewheel)
 
         # Pack canvas and scrollbar
         canvas.pack(side="left", fill="both", expand=True)
@@ -261,7 +267,7 @@ class GameBoard(tk.Frame):
                     row_cells.append(cell)
                 self.cells.append(row_cells)
             # Update canvas scroll region after adding rows
-            if hasattr(self, 'grid_canvas'):
+            if hasattr(self, "grid_canvas"):
                 self.grid_canvas.configure(scrollregion=self.grid_canvas.bbox("all"))
 
         # Reset all cells up to needed_rows (or current_rows for safety)
