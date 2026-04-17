@@ -315,14 +315,21 @@ class RaceBoard(tk.Frame):
         if self.game_state.game_over:
             self.submit_btn.config(state="disabled")
             self.entry.config(state="disabled")
-            self.message_label.config(text="游戏结束")
+            target_word = self.game_state.target_word.upper()
+            if self.game_state.winner:
+                self.message_label.config(
+                    text=f"玩家 {self.game_state.winner} 获胜！正确单词：{target_word}"
+                )
+                self.status_label.config(
+                    text=f"游戏结束！胜者: {self.game_state.winner}，正确单词：{target_word}"
+                )
+            else:
+                self.message_label.config(text=f"游戏结束，正确单词：{target_word}")
+                self.status_label.config(
+                    text=f"游戏结束！平局，正确单词：{target_word}"
+                )
             if hasattr(self, "restart_button"):
                 self.restart_button.config(state="normal")
-            winner = self.game_state.winner
-            if winner:
-                self.status_label.config(text=f"游戏结束！胜者: {winner}")
-            else:
-                self.status_label.config(text="游戏结束！平局")
         else:
             self.submit_btn.config(state="normal")
             self.entry.config(state="normal")

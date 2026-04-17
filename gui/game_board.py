@@ -307,7 +307,11 @@ class GameBoard(tk.Frame):
         if self.game_state.game_over:
             self.submit_btn.config(state="disabled")
             self.entry.config(state="disabled")
-            self.message_label.config(text="游戏结束")
+            if self.game_state.winner:
+                msg = f"玩家 {self.game_state.winner} 获胜！正确单词：{self.game_state.target_word.upper()}"
+            else:
+                msg = f"游戏结束，正确单词：{self.game_state.target_word.upper()}"
+            self.message_label.config(text=msg)
             if hasattr(self, "restart_button"):
                 self.restart_button.config(state="normal")
         else:
