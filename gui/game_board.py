@@ -18,6 +18,7 @@ class GameBoard(tk.Frame):
         master: tk.Widget,
         game_state: GameState,
         controller: GameController,
+        on_restart=None,
     ) -> None:
         """Initialize game board.
 
@@ -25,10 +26,12 @@ class GameBoard(tk.Frame):
             master: Parent widget.
             game_state: Current game state.
             controller: Game controller.
+            on_restart: Optional callback to invoke when restart button is clicked.
         """
         super().__init__(master, bg="#f0f0f0")
         self.game_state = game_state
         self.controller = controller
+        self.on_restart = on_restart
         self.length = game_state.target_length
         self.max_attempts = game_state.max_attempts
         self.cell_size = 50
@@ -37,6 +40,7 @@ class GameBoard(tk.Frame):
 
         self._setup_grid()
         self._setup_input()
+        self._setup_restart_button()
         self._setup_keyboard()
         self.update_display()
 
@@ -161,6 +165,24 @@ class GameBoard(tk.Frame):
             command=self.submit_guess,
         ).pack(side="left", padx=2)
 
+    def _setup_restart_button(self) -> None:
+        """Setup restart button."""
+        button_frame = tk.Frame(self, bg="#f0f0f0")
+        button_frame.pack(side="bottom", pady=10)
+        self.restart_button = tk.Button(
+            button_frame,
+            text="重开游戏",
+            font=("Arial", 12),
+            command=self._restart_game,
+            state="disabled",
+        )
+        self.restart_button.pack()
+
+    def _restart_game(self) -> None:
+        """Restart the game with same mode."""
+        if self.on_restart:
+            self.on_restart()
+
     def on_key_press(self, char: str) -> None:
         """Handle virtual keyboard key press."""
         if self.game_state.game_over:
@@ -237,9 +259,13 @@ class GameBoard(tk.Frame):
             self.submit_btn.config(state="disabled")
             self.entry.config(state="disabled")
             self.message_label.config(text="游戏结束")
+            if hasattr(self, 'restart_button'):
+                self.restart_button.config(state="normal")
         else:
             self.submit_btn.config(state="normal")
             self.entry.config(state="normal")
+            if hasattr(self, 'restart_button'):
+                self.restart_button.config(state="disabled")
 
         # Update info label
         if self.game_state.is_turn_based():

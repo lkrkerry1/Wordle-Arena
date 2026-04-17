@@ -317,13 +317,20 @@ Wordle Arena
         # Create appropriate board
         if mode.is_race():
             self.race_board = RaceBoard(
-                self.game_frame, self.game_state, self.ai_player, self.controller
+                self.game_frame,
+                self.game_state,
+                self.ai_player,
+                self.controller,
+                on_restart=lambda: self.start_game(mode),
             )
             self.race_board.pack(fill="both", expand=True)
             self.current_board = None
         else:
             self.current_board = GameBoard(
-                self.game_frame, self.game_state, self.controller
+                self.game_frame,
+                self.game_state,
+                self.controller,
+                on_restart=lambda: self.start_game(mode),
             )
             self.current_board.pack(fill="both", expand=True)
             self.race_board = None

@@ -19,6 +19,7 @@ class RaceBoard(tk.Frame):
         game_state: GameState,
         ai_player: Optional[AIPlayer],
         controller: GameController,
+        on_restart=None,
     ) -> None:
         """Initialize race board.
 
@@ -27,11 +28,13 @@ class RaceBoard(tk.Frame):
             game_state: Current game state.
             ai_player: AI player instance (if any).
             controller: Game controller.
+            on_restart: Optional callback to invoke when restart button is clicked.
         """
         super().__init__(master, bg="#f0f0f0")
         self.game_state = game_state
         self.ai_player = ai_player
         self.controller = controller
+        self.on_restart = on_restart
         self.length = game_state.target_length
         self.max_attempts = game_state.max_attempts
 
@@ -127,6 +130,18 @@ class RaceBoard(tk.Frame):
         # Virtual keyboard for player 1 (optional, reuse from game_board)
         self._setup_keyboard(left_frame)
 
+        # Restart button
+        restart_frame = tk.Frame(self, bg="#f0f0f0")
+        restart_frame.pack(side="bottom", pady=5)
+        self.restart_button = tk.Button(
+            restart_frame,
+            text="重开游戏",
+            font=("Arial", 12),
+            command=self._restart_game,
+            state="disabled",
+        )
+        self.restart_button.pack()
+
         # Status label
         self.status_label = tk.Label(
             self,
@@ -201,6 +216,11 @@ class RaceBoard(tk.Frame):
             command=lambda: self.entry_var.set(""),
         ).pack(side="left", padx=2)
 
+    def _restart_game(self) -> None:
+        """Restart the game with same mode."""
+        if self.on_restart:
+            self.on_restart()
+
     def on_key_press(self, char: str) -> None:
         """Handle virtual keyboard key press."""
         if self.game_state.game_over:
@@ -267,6 +287,8 @@ class RaceBoard(tk.Frame):
             self.submit_btn.config(state="disabled")
             self.entry.config(state="disabled")
             self.message_label.config(text="游戏结束")
+            if hasattr(self, 'restart_button'):
+                self.restart_button.config(state="normal")
             winner = self.game_state.winner
             if winner:
                 self.status_label.config(text=f"游戏结束！胜者: {winner}")
@@ -275,6 +297,8 @@ class RaceBoard(tk.Frame):
         else:
             self.submit_btn.config(state="normal")
             self.entry.config(state="normal")
+            if hasattr(self, 'restart_button'):
+                self.restart_button.config(state="disabled")
             self.status_label.config(
                 text=f"单词长度: {self.length} | 玩家1已猜: {len(player1_guesses)}"
             )
