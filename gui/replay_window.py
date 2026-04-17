@@ -121,12 +121,16 @@ class ReplayWindow:
             row.pack(fill="x", pady=2)
 
             # Guess number
-            tk.Label(
-                row, text=f"{idx+1}", width=3, anchor="w", bg="white"
-            ).pack(side="left", padx=5)
+            tk.Label(row, text=f"{idx + 1}", width=3, anchor="w", bg="white").pack(
+                side="left", padx=5
+            )
             # Guess word
             tk.Label(
-                row, text=guess.upper(), width=10, anchor="w", font=("Arial", 12, "bold")
+                row,
+                text=guess.upper(),
+                width=10,
+                anchor="w",
+                font=("Arial", 12, "bold"),
             ).pack(side="left", padx=5)
             # Feedback squares
             fb_frame = tk.Frame(row, bg="white")

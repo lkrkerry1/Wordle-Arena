@@ -3,8 +3,8 @@ Main window and menu for Wordle Arena.
 """
 
 import tkinter as tk
-from tkinter import ttk, messagebox
-from typing import Optional, Callable, Any
+from tkinter import messagebox
+from typing import Optional
 import json
 import os
 
@@ -96,13 +96,25 @@ class MainWindow:
         # Game menu
         game_menu = tk.Menu(menubar, tearoff=0)
         menubar.add_cascade(label="游戏", menu=game_menu)
-        game_menu.add_command(label="单人练习", command=lambda: self.start_game(GameMode.SINGLE))
+        game_menu.add_command(
+            label="单人练习", command=lambda: self.start_game(GameMode.SINGLE)
+        )
         game_menu.add_separator()
-        game_menu.add_command(label="人机回合对战", command=lambda: self.start_game(GameMode.VS_AI_TURN))
-        game_menu.add_command(label="人机竞速对战", command=lambda: self.start_game(GameMode.VS_AI_RACE))
+        game_menu.add_command(
+            label="人机回合对战", command=lambda: self.start_game(GameMode.VS_AI_TURN)
+        )
+        game_menu.add_command(
+            label="人机竞速对战", command=lambda: self.start_game(GameMode.VS_AI_RACE)
+        )
         game_menu.add_separator()
-        game_menu.add_command(label="双人回合对战", command=lambda: self.start_game(GameMode.VS_HUMAN_TURN))
-        game_menu.add_command(label="双人竞速对战", command=lambda: self.start_game(GameMode.VS_HUMAN_RACE))
+        game_menu.add_command(
+            label="双人回合对战",
+            command=lambda: self.start_game(GameMode.VS_HUMAN_TURN),
+        )
+        game_menu.add_command(
+            label="双人竞速对战",
+            command=lambda: self.start_game(GameMode.VS_HUMAN_RACE),
+        )
         game_menu.add_separator()
         game_menu.add_command(label="退出", command=self.root.quit)
 
@@ -258,6 +270,7 @@ Wordle Arena
         length_setting = self.config.get("word_length", "random")
         if length_setting == "random":
             import random
+
             available = self.word_bank.get_available_lengths()
             length = random.choice(available) if available else 5
         else:
@@ -277,6 +290,7 @@ Wordle Arena
                 messagebox.showerror("错误", f"词库中没有长度为 {length} 的单词")
                 return
             import random
+
             target = random.choice(candidates)
 
         # Create game state
@@ -350,7 +364,10 @@ def main() -> None:
     """Entry point for the GUI application."""
     root = tk.Tk()
     app = MainWindow(root)
-    root.protocol("WM_DELETE_WINDOW", lambda: (app.controller.stop() if app.controller else None, root.quit()))
+    root.protocol(
+        "WM_DELETE_WINDOW",
+        lambda: (app.controller.stop() if app.controller else None, root.quit()),
+    )
     root.mainloop()
 
 

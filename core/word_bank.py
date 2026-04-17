@@ -139,7 +139,9 @@ class WordBank:
                 length, first_letter.lower()
             )
         if not candidates:
-            raise ValueError(f"No word of length {length} with first letter {first_letter}")
+            raise ValueError(
+                f"No word of length {length} with first letter {first_letter}"
+            )
         return random.choice(candidates)
 
     def get_available_lengths(self) -> List[int]:

@@ -3,13 +3,11 @@ Race‑mode dual board layout with opponent attempt counter.
 """
 
 import tkinter as tk
-from tkinter import ttk
-from typing import Optional, Dict, Any
+from typing import Optional
 
 from core.game_state import GameState, GameMode
 from core.game_controller import GameController
 from core.ai_player import AIPlayer
-from .game_board import GameBoard
 
 
 class RaceBoard(tk.Frame):
@@ -64,7 +62,9 @@ class RaceBoard(tk.Frame):
         right_frame = tk.Frame(self, bg="#f0f0f0", relief="groove", borderwidth=2)
         right_frame.pack(side="right", fill="both", expand=True, padx=10, pady=10)
 
-        opponent_name = "AI" if self.game_state.mode == GameMode.VS_AI_RACE else "玩家 2"
+        opponent_name = (
+            "AI" if self.game_state.mode == GameMode.VS_AI_RACE else "玩家 2"
+        )
         tk.Label(
             right_frame,
             text=opponent_name,

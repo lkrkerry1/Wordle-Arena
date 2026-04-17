@@ -6,10 +6,10 @@ import math
 import random
 import threading
 import time
-from typing import Dict, List, Optional, Tuple, Set
 from functools import lru_cache
+from typing import Dict, List, Optional, Tuple
 
-from .feedback import get_feedback_cached, feedback_to_pattern
+from .feedback import feedback_to_pattern, get_feedback_cached
 from .word_bank import get_word_bank
 
 
@@ -74,9 +74,7 @@ class AIPlayer:
             previous_feedback = []
         candidates = self.word_bank.get_words_by_length(length)
         if first_letter is not None:
-            candidates = [
-                w for w in candidates if w.startswith(first_letter.lower())
-            ]
+            candidates = [w for w in candidates if w.startswith(first_letter.lower())]
         # Hard‑mode filtering (simplified)
         if hard_mode and previous_feedback:
             # TODO: implement proper hard‑mode filtering
@@ -208,9 +206,7 @@ class AIPlayer:
         for attempt in range(max_attempts):
             if stop_event.is_set():
                 break
-            guess = self.make_guess(
-                length, first_letter, hard_mode, previous_feedback
-            )
+            guess = self.make_guess(length, first_letter, hard_mode, previous_feedback)
             callback(guess)
             # Simulate receiving feedback (in race mode AI doesn't know answer)
             # We cannot compute actual feedback because answer is hidden.

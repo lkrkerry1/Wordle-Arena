@@ -3,10 +3,9 @@ Single‑player game board (variable‑length grid, input, virtual keyboard).
 """
 
 import tkinter as tk
-from tkinter import ttk, font
-from typing import Optional, List, Dict, Any
+from typing import List, Dict
 
-from core.game_state import GameState, GuessEntry
+from core.game_state import GameState
 from core.game_controller import GameController
 from core.feedback import feedback_to_colors
 

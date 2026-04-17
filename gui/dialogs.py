@@ -3,7 +3,7 @@ Dialogs for settings, results, etc.
 """
 
 import tkinter as tk
-from tkinter import ttk, simpledialog, messagebox
+from tkinter import ttk, messagebox
 from typing import Optional, Dict, Any
 
 
@@ -38,7 +38,9 @@ class SettingsDialog:
         tk.Label(main_frame, text="词库:", font=("Arial", 12)).grid(
             row=0, column=0, sticky="w", pady=10
         )
-        self.bank_var = tk.StringVar(value=self.config.get("word_bank", "words_full.txt"))
+        self.bank_var = tk.StringVar(
+            value=self.config.get("word_bank", "words_full.txt")
+        )
         bank_combo = ttk.Combobox(
             main_frame,
             textvariable=self.bank_var,
@@ -83,9 +85,9 @@ class SettingsDialog:
         ).pack(side="left", padx=5)
 
         # AI temperature
-        tk.Label(main_frame, text="AI 随机性 (0=确定, 1=随机):", font=("Arial", 12)).grid(
-            row=3, column=0, sticky="w", pady=10
-        )
+        tk.Label(
+            main_frame, text="AI 随机性 (0=确定, 1=随机):", font=("Arial", 12)
+        ).grid(row=3, column=0, sticky="w", pady=10)
         self.temp_var = tk.DoubleVar(value=self.config.get("ai_temperature", 0.0))
         temp_scale = tk.Scale(
             main_frame,

@@ -2,8 +2,8 @@
 Feedback calculation for Wordle (variable length) and pattern encoding.
 """
 
-from typing import List, Tuple
 from functools import lru_cache
+from typing import List, Tuple
 
 
 def get_feedback(guess: str, answer: str) -> List[int]:

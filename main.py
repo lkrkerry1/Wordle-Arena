@@ -8,8 +8,8 @@ AI opponent, and race modes.
 Run this script to start the game.
 """
 
-import sys
 import os
+import sys
 
 # Ensure the project root is in sys.path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -19,6 +19,7 @@ def main() -> None:
     """Launch the GUI application."""
     try:
         from gui.main_window import main as gui_main
+
         gui_main()
     except ImportError as e:
         print(f"Import error: {e}")

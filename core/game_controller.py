@@ -5,10 +5,11 @@ Game controller orchestrates game flow, AI turns, timers, and race coordination.
 import random
 import threading
 import time
-from typing import Callable, Optional, List, Tuple, Any
-from .game_state import GameState, GameMode, PlayerType
-from .feedback import get_feedback
+from typing import Callable, List, Optional, Tuple
+
 from .ai_player import AIPlayer
+from .feedback import get_feedback
+from .game_state import GameMode, GameState, PlayerType
 
 
 class GameController:
@@ -95,6 +96,7 @@ class GameController:
             return
         # Reset AI stop flag
         self.ai_player.reset_stop()
+
         # Define callback that will be called with each AI guess
         def ai_guess_callback(guess: str) -> None:
             # The AI does not know the answer; we need to compute feedback.
@@ -159,6 +161,7 @@ class GameController:
         """Make AI take a turn (turn‑based mode)."""
         if self.ai_player is None:
             return
+
         # Run AI decision in a separate thread to avoid blocking UI
         def ai_turn() -> None:
             # Simulate thinking delay
@@ -207,10 +210,7 @@ class GameController:
         Returns:
             List of (player_id, guess, feedback) for all guesses.
         """
-        return [
-            (g.player_id, g.guess, g.feedback)
-            for g in self.game_state.guesses
-        ]
+        return [(g.player_id, g.guess, g.feedback) for g in self.game_state.guesses]
 
 
 # Helper function to create a game state from configuration
