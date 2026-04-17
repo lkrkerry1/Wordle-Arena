@@ -45,17 +45,39 @@ class GameBoard(tk.Frame):
         self.update_display()
 
     def _setup_grid(self) -> None:
-        """Create the grid of guess cells."""
-        grid_frame = tk.Frame(self, bg="#f0f0f0")
-        grid_frame.pack(side="top", pady=20)
+        """Create a scrollable grid of guess cells."""
+        # Container for canvas and scrollbar
+        container = tk.Frame(self, bg="#f0f0f0")
+        container.pack(side="top", fill="both", expand=True, pady=20)
 
-        # Create cells: rows = max_attempts, cols = length
+        # Canvas with vertical scrollbar
+        canvas = tk.Canvas(container, bg="#f0f0f0", highlightthickness=0)
+        scrollbar = tk.Scrollbar(container, orient="vertical", command=canvas.yview)
+        scrollable_frame = tk.Frame(canvas, bg="#f0f0f0")
+
+        scrollable_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+        )
+
+        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+
+        # Pack canvas and scrollbar
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+
+        self.grid_frame = scrollable_frame
+        self.grid_canvas = canvas
+
+        # Create initial cells (partial rendering)
+        initial_rows = min(self.max_attempts, 20)  # render at most 20 rows initially
         self.cells: List[List[tk.Label]] = []
-        for r in range(self.max_attempts):
+        for r in range(initial_rows):
             row_cells = []
             for c in range(self.length):
                 cell = tk.Label(
-                    grid_frame,
+                    self.grid_frame,
                     width=2,
                     height=1,
                     relief="ridge",
@@ -69,7 +91,7 @@ class GameBoard(tk.Frame):
                 row_cells.append(cell)
             self.cells.append(row_cells)
 
-        # Info label
+        # Info label (below the scrollable grid)
         self.info_label = tk.Label(
             self,
             text=f"单词长度: {self.length}",
@@ -216,11 +238,38 @@ class GameBoard(tk.Frame):
 
     def update_display(self) -> None:
         """Update grid and keyboard colors based on game state."""
-        # Fill grid cells
-        for r in range(self.max_attempts):
+        # Ensure enough rows in the grid
+        needed_rows = len(self.game_state.guesses)
+        current_rows = len(self.cells)
+        if needed_rows > current_rows:
+            # Add extra rows
+            for r in range(current_rows, needed_rows):
+                row_cells = []
+                for c in range(self.length):
+                    cell = tk.Label(
+                        self.grid_frame,
+                        width=2,
+                        height=1,
+                        relief="ridge",
+                        borderwidth=2,
+                        bg="white",
+                        fg="black",
+                        font=("Arial", 20, "bold"),
+                        text="",
+                    )
+                    cell.grid(row=r, column=c, padx=self.padding, pady=self.padding)
+                    row_cells.append(cell)
+                self.cells.append(row_cells)
+            # Update canvas scroll region after adding rows
+            if hasattr(self, 'grid_canvas'):
+                self.grid_canvas.configure(scrollregion=self.grid_canvas.bbox("all"))
+
+        # Reset all cells up to needed_rows (or current_rows for safety)
+        for r in range(max(needed_rows, current_rows)):
             for c in range(self.length):
                 cell = self.cells[r][c]
                 cell.config(text="", bg="white")
+
         # Place guesses
         for i, guess_entry in enumerate(self.game_state.guesses):
             r = i
@@ -259,12 +308,12 @@ class GameBoard(tk.Frame):
             self.submit_btn.config(state="disabled")
             self.entry.config(state="disabled")
             self.message_label.config(text="游戏结束")
-            if hasattr(self, 'restart_button'):
+            if hasattr(self, "restart_button"):
                 self.restart_button.config(state="normal")
         else:
             self.submit_btn.config(state="normal")
             self.entry.config(state="normal")
-            if hasattr(self, 'restart_button'):
+            if hasattr(self, "restart_button"):
                 self.restart_button.config(state="disabled")
 
         # Update info label

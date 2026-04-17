@@ -123,7 +123,7 @@ class GameState:
         if all(f == 2 for f in feedback):
             self.winner = player_id
             self.game_over = True
-        elif self.attempts_used >= self.max_attempts:
+        elif not self.mode.is_turn_based() and self.attempts_used >= self.max_attempts:
             self.game_over = True
 
     def get_player_guesses(self, player_id: str) -> List[GuessEntry]:

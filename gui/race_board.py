@@ -5,9 +5,9 @@ Race‑mode dual board layout with opponent attempt counter.
 import tkinter as tk
 from typing import Optional
 
-from core.game_state import GameState, GameMode
-from core.game_controller import GameController
 from core.ai_player import AIPlayer
+from core.game_controller import GameController
+from core.game_state import GameMode, GameState
 
 
 class RaceBoard(tk.Frame):
@@ -143,9 +143,13 @@ class RaceBoard(tk.Frame):
         self.restart_button.pack()
 
         # Status label
+        if self.game_state.mode.is_race():
+            status_text = f"单词长度: {self.length} | 无限尝试"
+        else:
+            status_text = f"单词长度: {self.length} | 最大尝试: {self.max_attempts}"
         self.status_label = tk.Label(
             self,
-            text=f"单词长度: {self.length} | 最大尝试: {self.max_attempts}",
+            text=status_text,
             font=("Arial", 12),
             bg="#f0f0f0",
         )
@@ -256,10 +260,35 @@ class RaceBoard(tk.Frame):
         player1_guesses = [
             g for g in self.game_state.guesses if g.player_id == self.player1_id
         ]
-        for r in range(self.max_attempts):
+        # Ensure enough rows in the grid
+        needed_rows = len(player1_guesses)
+        current_rows = len(self.player_cells)
+        if needed_rows > current_rows:
+            # Add extra rows
+            for r in range(current_rows, needed_rows):
+                row_cells = []
+                for c in range(self.length):
+                    cell = tk.Label(
+                        self.player1_board,
+                        width=2,
+                        height=1,
+                        relief="ridge",
+                        borderwidth=1,
+                        bg="white",
+                        fg="black",
+                        font=("Arial", 12),
+                        text="",
+                    )
+                    cell.grid(row=r, column=c, padx=1, pady=1)
+                    row_cells.append(cell)
+                self.player_cells.append(row_cells)
+
+        # Reset all cells up to needed_rows (or current_rows for safety)
+        for r in range(max(needed_rows, current_rows)):
             for c in range(self.length):
                 cell = self.player_cells[r][c]
                 cell.config(text="", bg="white")
+
         for i, guess_entry in enumerate(player1_guesses):
             r = i
             guess = guess_entry.guess.upper()
@@ -287,7 +316,7 @@ class RaceBoard(tk.Frame):
             self.submit_btn.config(state="disabled")
             self.entry.config(state="disabled")
             self.message_label.config(text="游戏结束")
-            if hasattr(self, 'restart_button'):
+            if hasattr(self, "restart_button"):
                 self.restart_button.config(state="normal")
             winner = self.game_state.winner
             if winner:
@@ -297,7 +326,7 @@ class RaceBoard(tk.Frame):
         else:
             self.submit_btn.config(state="normal")
             self.entry.config(state="normal")
-            if hasattr(self, 'restart_button'):
+            if hasattr(self, "restart_button"):
                 self.restart_button.config(state="disabled")
             self.status_label.config(
                 text=f"单词长度: {self.length} | 玩家1已猜: {len(player1_guesses)}"

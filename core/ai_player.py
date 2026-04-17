@@ -202,10 +202,7 @@ class AIPlayer:
         if stop_event is None:
             stop_event = self._stop_thread
         previous_feedback: List[Tuple[str, List[int]]] = []
-        max_attempts = length + 1
-        for attempt in range(max_attempts):
-            if stop_event.is_set():
-                break
+        while not stop_event.is_set():
             guess = self.make_guess(length, first_letter, hard_mode, previous_feedback)
             callback(guess)
             # Simulate receiving feedback (in race mode AI doesn't know answer)
@@ -217,5 +214,3 @@ class AIPlayer:
             # Random delay
             delay = random.uniform(self.min_delay, self.max_delay)
             time.sleep(delay)
-            if stop_event.is_set():
-                break
