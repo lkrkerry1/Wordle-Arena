@@ -41,6 +41,41 @@
    ./main.py
    ```
 
+## 服务器版本
+
+除了桌面 GUI 版本，本项目还提供了一个基于 Web 的服务器版本，允许你在本地运行一个网页游戏。
+
+### 运行服务器
+
+1. 安装额外依赖（Flask）：
+   ```bash
+   pip install flask
+   ```
+
+2. 启动服务器：
+   ```bash
+   python server.py
+   ```
+
+3. 打开浏览器访问 [http://localhost:5000](http://localhost:5000) 即可开始游戏。
+
+### 功能特点
+
+- 提供与桌面版相同的核心游戏逻辑（单人模式、AI 对战等）
+- 响应式 Web 界面，支持键盘输入与实时反馈
+- 完整的 REST API，可用于第三方集成
+- 会话管理，支持多用户同时游戏
+
+### API 接口
+
+- `GET /` – 返回前端页面
+- `POST /api/game` – 创建新游戏
+- `GET /api/game/<session_id>` – 获取游戏状态
+- `POST /api/game/<session_id>/guess` – 提交猜测
+- `POST /api/game/<session_id>/ai_turn` – 请求 AI 进行猜测
+
+详细 API 文档请参阅 `server.py` 源码。
+
 ## 使用方法
 
 1. **启动游戏**：运行 `main.py` 后，主窗口将显示菜单。

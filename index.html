@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wordle Arena - Web Version</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .container {
+            max-width: 800px;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        h1 {
+            text-align: center;
+            margin-top: 0;
+            color: #4cc9f0;
+            font-size: 2.8rem;
+            text-shadow: 0 0 10px rgba(76, 201, 240, 0.5);
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #aaa;
+            margin-bottom: 30px;
+        }
+
+        .panel {
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+        }
+
+        .game-control,
+        .game-status {
+            /* 样式已在后面定义，此处无需重复 */
+        }
+
+        .main-content {
+            display: flex;
+            flex-direction: row;
+            gap: 40px;
+            margin-top: 20px;
+        }
+
+        .left-panel {
+            flex: 1;
+            max-width: 400px;
+        }
+
+        .right-panel {
+            flex: 2;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        @media (max-width: 900px) {
+            .main-content {
+                flex-direction: column;
+            }
+
+            .left-panel {
+                max-width: 100%;
+            }
+        }
+
+        @media (max-width: 700px) {
+            .panel {
+                flex-direction: column;
+            }
+        }
+
+        .game-control,
+        .game-status {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 20px;
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        h2 {
+            color: #72efdd;
+            margin-top: 0;
+            font-size: 1.5rem;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #ccc;
+        }
+
+        select,
+        input,
+        button {
+            width: 100%;
+            padding: 12px;
+            border-radius: 8px;
+            border: none;
+            font-size: 1rem;
+        }
+
+        select,
+        input {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        button {
+            background: linear-gradient(90deg, #4361ee, #3a0ca3);
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 10px;
+        }
+
+        button:hover {
+            background: linear-gradient(90deg, #3a0ca3, #4361ee);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .game-board {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 10px 0 30px 0;
+        }
+
+        .guess-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .letter-cell {
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            font-weight: bold;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            text-transform: uppercase;
+            transition: all 0.3s;
+        }
+
+        .letter-cell.correct {
+            background: #4caf50;
+            border-color: #4caf50;
+        }
+
+        .letter-cell.present {
+            background: #ffb347;
+            border-color: #ffb347;
+        }
+
+        .letter-cell.absent {
+            background: #555;
+            border-color: #555;
+        }
+
+        .guess-input {
+            display: flex;
+            gap: 10px;
+            margin: 20px auto;
+            width: 100%;
+            max-width: 500px;
+            justify-content: center;
+        }
+
+        .guess-input input {
+            flex: 1;
+            text-align: center;
+            font-size: 1.5rem;
+            letter-spacing: 5px;
+            text-transform: uppercase;
+        }
+
+        .guess-input button {
+            width: auto;
+            padding: 12px 30px;
+        }
+
+        .messages {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            border-left: 5px solid #4361ee;
+            min-height: 60px;
+        }
+
+        .message {
+            margin: 5px 0;
+            color: #ccc;
+        }
+
+        .message.error {
+            color: #ff6b6b;
+        }
+
+        .message.success {
+            color: #4caf50;
+        }
+
+        .message.info {
+            color: #4cc9f0;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .game-info {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .info-item {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 10px 20px;
+            border-radius: 10px;
+            text-align: center;
+            flex: 1;
+            min-width: 150px;
+        }
+
+        .info-label {
+            font-size: 0.9rem;
+            color: #aaa;
+        }
+
+        .info-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #72efdd;
+        }
+
+        footer {
+            margin-top: 30px;
+            text-align: center;
+            color: #777;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>Wordle Arena</h1>
+        <p class="subtitle">A server‑based Wordle game with AI opponent</p>
+
+        <div class="main-content">
+            <div class="left-panel">
+                <div class="panel">
+                    <div class="game-control">
+                        <h2>Game Settings</h2>
+                        <div class="form-group">
+                            <label for="mode">Game Mode</label>
+                            <select id="mode">
+                                <option value="single">Single Player (Practice)</option>
+                                <option value="vs_ai_turn">Turn‑based vs AI</option>
+                                <option value="vs_ai_race" disabled>Race vs AI (Coming Soon)</option>
+                                <option value="vs_human_turn" disabled>Two‑Player Turn‑based (Coming Soon)</option>
+                                <option value="vs_human_race" disabled>Two‑Player Race (Coming Soon)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="length">Word Length</label>
+                            <select id="length">
+                                <option value="4">4 letters</option>
+                                <option value="5" selected>5 letters</option>
+                                <option value="6">6 letters</option>
+                                <option value="7">7 letters</option>
+                                <option value="8">8 letters</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="firstLetter">First Letter (optional)</label>
+                            <input type="text" id="firstLetter" maxlength="1" placeholder="e.g., a" />
+                        </div>
+                        <div class="form-group">
+                            <label for="hardMode">
+                                <input type="checkbox" id="hardMode" /> Hard Mode
+                            </label>
+                        </div>
+                        <div class="form-group">
+                            <label for="wordBank">Word Bank</label>
+                            <select id="wordBank">
+                                <option value="words_gaokao.txt">Gaokao</option>
+                                <option value="words_cet4.txt">CET-4</option>
+                                <option value="words_full.txt">Full</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="aiTemperature">AI Temperature (0-1)</label>
+                            <input type="number" id="aiTemperature" min="0" max="1" step="0.1" value="0.6" />
+                        </div>
+                        <div class="form-group">
+                            <label for="aiMinDelay">AI Min Delay (seconds)</label>
+                            <input type="number" id="aiMinDelay" min="0.1" max="10" step="0.1" value="2.0" />
+                        </div>
+                        <div class="form-group">
+                            <label for="aiMaxDelay">AI Max Delay (seconds)</label>
+                            <input type="number" id="aiMaxDelay" min="0.1" max="10" step="0.1" value="4.0" />
+                        </div>
+                        <button id="startBtn">Start New Game</button>
+                    </div>
+
+                    <div class="game-status">
+                        <h2>Game Status</h2>
+                        <div class="game-info">
+                            <div class="info-item">
+                                <div class="info-label">Mode</div>
+                                <div class="info-value" id="statusMode">-</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label">Length</div>
+                                <div class="info-value" id="statusLength">-</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label">Attempts</div>
+                                <div class="info-value" id="statusAttempts">-</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label">Remaining</div>
+                                <div class="info-value" id="statusRemaining">-</div>
+                            </div>
+                        </div>
+                        <div class="messages" id="messages">
+                            <div class="message info">Start a new game to play.</div>
+                        </div>
+                        <div id="aiTurnSection" class="hidden">
+                            <p>It's AI's turn. Click below to let AI make a guess.</p>
+                            <button id="aiTurnBtn">AI Turn</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="right-panel">
+                <div class="game-board" id="gameBoard">
+                    <!-- Guess rows will be dynamically added here -->
+                </div>
+                <div class="guess-input">
+                    <input type="text" id="guessInput" maxlength="10" placeholder="Enter your guess" disabled />
+                    <button id="submitBtn" disabled>Submit Guess</button>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            Wordle Arena Server Version • Built with Flask • Game logic from Wordle Arena core
+        </footer>
+    </div>
+
+    <script>
+        let currentSession = null;
+        let wordLength = 5;
+        let gameOver = false;
+
+        const API_BASE = window.location.origin; // Same origin
+
+        function addMessage(text, type = 'info') {
+            const messages = document.getElementById('messages');
+            const msg = document.createElement('div');
+            msg.className = `message ${type}`;
+            msg.textContent = text;
+            messages.appendChild(msg);
+            messages.scrollTop = messages.scrollHeight;
+        }
+
+        function clearMessages() {
+            document.getElementById('messages').innerHTML = '';
+        }
+
+        function updateGameBoard(guesses, targetLength) {
+            const board = document.getElementById('gameBoard');
+            board.innerHTML = '';
+            // Create rows for each guess
+            guesses.forEach(guess => {
+                const row = document.createElement('div');
+                row.className = 'guess-row';
+                const word = guess.guess;
+                const feedback = guess.feedback;
+                for (let i = 0; i < targetLength; i++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'letter-cell';
+                    cell.textContent = word[i]?.toUpperCase() || '';
+                    if (feedback && feedback[i] === 2) {
+                        cell.classList.add('correct');
+                    } else if (feedback && feedback[i] === 1) {
+                        cell.classList.add('present');
+                    } else if (feedback && feedback[i] === 0) {
+                        cell.classList.add('absent');
+                    }
+                    row.appendChild(cell);
+                }
+                board.appendChild(row);
+            });
+            // Add empty rows for remaining attempts (max 6 rows total)
+            const maxRows = targetLength + 1;
+            const emptyRows = maxRows - guesses.length;
+            for (let r = 0; r < emptyRows; r++) {
+                const row = document.createElement('div');
+                row.className = 'guess-row';
+                for (let i = 0; i < targetLength; i++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'letter-cell';
+                    row.appendChild(cell);
+                }
+                board.appendChild(row);
+            }
+        }
+
+        function updateStatus(gameState) {
+            document.getElementById('statusMode').textContent = gameState.mode;
+            document.getElementById('statusLength').textContent = gameState.target_length;
+            document.getElementById('statusAttempts').textContent = gameState.attempts_used;
+            document.getElementById('statusRemaining').textContent = gameState.attempts_left;
+            wordLength = gameState.target_length;
+            gameOver = gameState.game_over;
+
+            // Enable/disable input
+            const guessInput = document.getElementById('guessInput');
+            const submitBtn = document.getElementById('submitBtn');
+            const aiTurnSection = document.getElementById('aiTurnSection');
+            if (gameOver) {
+                guessInput.disabled = true;
+                submitBtn.disabled = true;
+                addMessage(`Game over! ${gameState.winner ? 'Winner: ' + gameState.winner : 'No winner.'}`, 'info');
+            } else {
+                guessInput.disabled = false;
+                submitBtn.disabled = false;
+                if (gameState.mode === 'vs_ai_turn' && gameState.current_player === 'player2') {
+                    aiTurnSection.classList.remove('hidden');
+                } else {
+                    aiTurnSection.classList.add('hidden');
+                }
+            }
+        }
+
+        async function startNewGame() {
+            const mode = document.getElementById('mode').value;
+            const length = parseInt(document.getElementById('length').value);
+            const firstLetter = document.getElementById('firstLetter').value.trim();
+            const hardMode = document.getElementById('hardMode').checked;
+            const wordBank = document.getElementById('wordBank').value;
+            const aiTemperature = parseFloat(document.getElementById('aiTemperature').value);
+            const aiMinDelay = parseFloat(document.getElementById('aiMinDelay').value);
+            const aiMaxDelay = parseFloat(document.getElementById('aiMaxDelay').value);
+
+            clearMessages();
+            addMessage('Creating new game...', 'info');
+
+            try {
+                const response = await fetch(`${API_BASE}/api/game`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        mode,
+                        length,
+                        first_letter: firstLetter || null,
+                        hard_mode: hardMode,
+                        word_bank: wordBank,
+                        ai_temperature: aiTemperature,
+                        ai_min_delay: aiMinDelay,
+                        ai_max_delay: aiMaxDelay
+                    })
+                });
+                if (!response.ok) {
+                    const err = await response.json();
+                    throw new Error(err.error || 'Failed to create game');
+                }
+                const data = await response.json();
+                currentSession = data.session_id;
+                addMessage(`Game started! Session: ${currentSession.substring(0, 8)}...`, 'success');
+                // Fetch initial game state
+                await fetchGameState();
+            } catch (error) {
+                addMessage(`Error: ${error.message}`, 'error');
+            }
+        }
+
+        async function loadWordBanks() {
+            try {
+                const response = await fetch(`${API_BASE}/api/wordbanks`);
+                if (!response.ok) {
+                    throw new Error('Failed to load word banks');
+                }
+                const banks = await response.json();
+                const select = document.getElementById('wordBank');
+                // 保存当前选中的值
+                const selected = select.value;
+                select.innerHTML = '';
+                banks.forEach(bank => {
+                    const option = document.createElement('option');
+                    option.value = bank;
+                    option.textContent = bank.replace('.txt', '').replace('words_', '').replace('_', ' ').toUpperCase();
+                    select.appendChild(option);
+                });
+                // 恢复选中项（如果存在）
+                if (banks.includes(selected)) {
+                    select.value = selected;
+                } else if (banks.length > 0) {
+                    select.value = banks[0];
+                }
+            } catch (error) {
+                console.error('Failed to load word banks:', error);
+                // 保留静态默认值
+            }
+        }
+
+        async function fetchGameState() {
+            if (!currentSession) return;
+            try {
+                const response = await fetch(`${API_BASE}/api/game/${currentSession}`);
+                if (!response.ok) {
+                    throw new Error('Game session not found');
+                }
+                const gameState = await response.json();
+                updateGameBoard(gameState.guesses, gameState.target_length);
+                updateStatus(gameState);
+                // Update guess input max length
+                document.getElementById('guessInput').maxLength = gameState.target_length;
+            } catch (error) {
+                addMessage(`Error fetching game state: ${error.message}`, 'error');
+            }
+        }
+
+        async function submitGuess() {
+            const guessInput = document.getElementById('guessInput');
+            const guess = guessInput.value.trim().toLowerCase();
+            if (!guess || guess.length !== wordLength) {
+                addMessage(`Please enter a ${wordLength}-letter word`, 'error');
+                return;
+            }
+            if (!currentSession) {
+                addMessage('No active game session', 'error');
+                return;
+            }
+            addMessage(`Submitting guess: ${guess}`, 'info');
+            try {
+                const response = await fetch(`${API_BASE}/api/game/${currentSession}/guess`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ guess })
+                });
+                if (!response.ok) {
+                    const err = await response.json();
+                    throw new Error(err.error || 'Guess submission failed');
+                }
+                const result = await response.json();
+                guessInput.value = '';
+                await fetchGameState();
+                if (result.game_over) {
+                    addMessage(`Game over! Winner: ${result.winner || 'none'}`, 'success');
+                }
+            } catch (error) {
+                addMessage(`Error: ${error.message}`, 'error');
+            }
+        }
+
+        async function aiTurn() {
+            if (!currentSession) return;
+            addMessage('AI thinking...', 'info');
+            try {
+                const response = await fetch(`${API_BASE}/api/game/${currentSession}/ai_turn`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                if (!response.ok) {
+                    const err = await response.json();
+                    throw new Error(err.error || 'AI turn failed');
+                }
+                const result = await response.json();
+                addMessage(`AI guessed: ${result.guess}`, 'info');
+                await fetchGameState();
+            } catch (error) {
+                addMessage(`Error: ${error.message}`, 'error');
+            }
+        }
+
+        // Event listeners
+        document.getElementById('startBtn').addEventListener('click', startNewGame);
+        document.getElementById('submitBtn').addEventListener('click', submitGuess);
+        document.getElementById('aiTurnBtn').addEventListener('click', aiTurn);
+        document.getElementById('guessInput').addEventListener('keyup', (e) => {
+            if (e.key === 'Enter') submitGuess();
+        });
+        // Auto‑uppercase first letter input
+        document.getElementById('firstLetter').addEventListener('input', (e) => {
+            e.target.value = e.target.value.toUpperCase().replace(/[^A-Z]/g, '');
+        });
+        // Guess input uppercase
+        document.getElementById('guessInput').addEventListener('input', (e) => {
+            e.target.value = e.target.value.toUpperCase().replace(/[^A-Z]/g, '');
+        });
+
+        // Initialize
+        loadWordBanks();
+        addMessage('Ready to play. Configure settings and start a new game.', 'info');
+    </script>
+</body>
+
+</html>
