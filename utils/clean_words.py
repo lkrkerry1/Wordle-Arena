@@ -9,6 +9,7 @@
 
 import re
 import sys
+import logging
 from pathlib import Path
 from typing import List, Set
 
@@ -31,21 +32,21 @@ def save_words(words: List[str], output_file: Path) -> None:
     with open(output_file, "w", encoding="utf-8") as f:
         for word in words:
             f.write(word + "\n")
-    print(f"✅ 处理完成！已生成词库文件: {output_file} (共 {len(words)} 个单词)")
+    logging.info(f"✅ 处理完成！已生成词库文件: {output_file} (共 {len(words)} 个单词)")
 
 
 def main() -> None:
     """主函数：处理输入的原始文件，输出清洗后的词库。"""
     if len(sys.argv) < 2:
-        print("使用方法: python clean_words.py <你的原始词汇文件>.txt")
+        logging.error("使用方法: python clean_words.py <你的原始词汇文件>.txt")
         sys.exit(1)
 
     raw_file = Path(sys.argv[1])
     if not raw_file.exists():
-        print(f"❌ 错误: 文件未找到 '{raw_file}'")
+        logging.error(f"❌ 错误: 文件未找到 '{raw_file}'")
         sys.exit(1)
 
-    print(f"🔍 正在处理文件: {raw_file}...")
+    logging.info(f"🔍 正在处理文件: {raw_file}...")
     text = raw_file.read_text(encoding="utf-8")
 
     # 提取、过滤并保存

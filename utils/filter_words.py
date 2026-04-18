@@ -1,3 +1,6 @@
+import logging
+
+
 def filter_wordle_words(input_file: str, output_file: str) -> None:
     """筛选Wordle可用的纯字母单词（长度4-8）。"""
     with (
@@ -11,5 +14,5 @@ def filter_wordle_words(input_file: str, output_file: str) -> None:
 
 
 if __name__ == "__main__":
-    print("Start filter")
+    logging.info("Start filter")
     filter_wordle_words(r"data\words_alpha.txt", r"data\words_full.txt")

@@ -211,42 +211,27 @@ class MainWindow:
 
     def open_settings(self) -> None:
         """Open settings dialog."""
-        import sys
-
-        print("[DEBUG] open_settings called", file=sys.stderr)
-        sys.stderr.flush()
+        logging.debug("open_settings called")
         try:
             dialog = SettingsDialog(self.root, self.config)
-            print("[DEBUG] SettingsDialog created", file=sys.stderr)
-            sys.stderr.flush()
+            logging.debug("SettingsDialog created")
         except Exception as e:
-            print(f"[ERROR] Failed to create SettingsDialog: {e}", file=sys.stderr)
-            sys.stderr.flush()
+            logging.error(f"Failed to create SettingsDialog: {e}")
             return
         # Wait for dialog to close
         dialog.dialog.wait_window()
-        print("[DEBUG] dialog closed", file=sys.stderr)
-        sys.stderr.flush()
+        logging.debug("dialog closed")
         if dialog.result:
             # Debug log
-            print(
-                f"[DEBUG open_settings] dialog.result = {dialog.result}",
-                file=sys.stderr,
-            )
-            sys.stderr.flush()
+            logging.debug(f"dialog.result = {dialog.result}")
             # Remember old word bank to detect changes
             old_bank = self.config.get("word_bank")
             # Update config
             for k, v in dialog.result.items():
                 self.config[k] = v
-            print(
-                f"[DEBUG open_settings] config after update = {self.config}",
-                file=sys.stderr,
-            )
-            sys.stderr.flush()
+            logging.debug(f"config after update = {self.config}")
             self._save_config()
-            print("[DEBUG open_settings] config saved", file=sys.stderr)
-            sys.stderr.flush()
+            logging.debug("config saved")
             self._update_status()
             # Update AI player parameters
             self.ai_player.temperature = self.config.get("ai_temperature", 0.0)
@@ -262,17 +247,13 @@ class MainWindow:
                 current_mode = self.game_state.mode
                 self.start_game(current_mode)
         else:
-            print(
-                "[DEBUG open_settings] dialog.result is None (cancelled or closed)",
-                file=sys.stderr,
-            )
-            sys.stderr.flush()
+            logging.debug("dialog.result is None (cancelled or closed)")
 
     def reset_config(self) -> None:
         """Reset configuration to defaults."""
         self.config = self._load_config()  # reload defaults
         self._save_config()
-        print(f"[DEBUG open_settings] config after save = {self.config}")
+        logging.debug(f"config after save = {self.config}")
         self._update_status()
         # Reload word bank to reflect default bank
         self.word_bank = get_word_bank(bank_name=self.config.get("word_bank"))
@@ -343,8 +324,8 @@ Wordle Arena
         else:
             length = int(length_setting)
         # Debug log
-        print(
-            f"[DEBUG] start_game: length_setting={length_setting}, chosen length={length}"
+        logging.debug(
+            f"start_game: length_setting={length_setting}, chosen length={length}"
         )
 
         # Choose target word
