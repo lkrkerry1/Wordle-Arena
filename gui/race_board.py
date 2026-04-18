@@ -169,13 +169,13 @@ class RaceBoard(tk.Frame):
                     width=2,
                     height=1,
                     relief="ridge",
-                    borderwidth=1,
+                    borderwidth=2,
                     bg="white",
                     fg="black",
-                    font=("Arial", 12),
+                    font=("Arial", 20, "bold"),
                     text="",
                 )
-                cell.grid(row=r, column=c, padx=1, pady=1)
+                cell.grid(row=r, column=c, padx=5, pady=5)
                 row_cells.append(cell)
             cells.append(row_cells)
         self.player_cells = cells
@@ -194,9 +194,9 @@ class RaceBoard(tk.Frame):
                 btn = tk.Button(
                     row_frame,
                     text=ch,
-                    width=2,
-                    height=1,
-                    font=("Arial", 9),
+                    width=3,
+                    height=2,
+                    font=("Arial", 10, "bold"),
                     command=lambda c=ch: self.on_key_press(c),
                 )
                 btn.pack(side="left", padx=1)
@@ -206,17 +206,17 @@ class RaceBoard(tk.Frame):
         tk.Button(
             control_frame,
             text="删除",
-            width=5,
-            height=1,
-            font=("Arial", 9),
+            width=6,
+            height=2,
+            font=("Arial", 10),
             command=self.on_backspace,
         ).pack(side="left", padx=2)
         tk.Button(
             control_frame,
             text="清空",
-            width=5,
-            height=1,
-            font=("Arial", 9),
+            width=6,
+            height=2,
+            font=("Arial", 10),
             command=lambda: self.entry_var.set(""),
         ).pack(side="left", padx=2)
 
@@ -273,13 +273,13 @@ class RaceBoard(tk.Frame):
                         width=2,
                         height=1,
                         relief="ridge",
-                        borderwidth=1,
+                        borderwidth=2,
                         bg="white",
                         fg="black",
-                        font=("Arial", 12),
+                        font=("Arial", 20, "bold"),
                         text="",
                     )
-                    cell.grid(row=r, column=c, padx=1, pady=1)
+                    cell.grid(row=r, column=c, padx=5, pady=5)
                     row_cells.append(cell)
                 self.player_cells.append(row_cells)
 
