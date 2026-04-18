@@ -16,38 +16,65 @@ class WordBank:
         word_sets_set: Dict[int, Set[str]] for fast membership test.
     """
 
-    def __init__(self, data_dir: str = "data") -> None:
-        """Initialize word bank with data directory.
+    def __init__(self, data_dir: str = "data", bank_name: Optional[str] = None) -> None:
+        """Initialize word bank with data directory and optional bank name.
 
         Args:
             data_dir: Path to directory containing word list files.
+            bank_name: If provided, load only this specific file (e.g., "words_gaokao.txt").
+                If None, load all .txt files in the directory (default).
         """
         self.data_dir = data_dir
+        self.bank_name = bank_name
         self.word_sets: Dict[int, List[str]] = {}
         self.first_letter_index: Dict[int, Dict[str, List[str]]] = {}
         self.word_sets_set: Dict[int, Set[str]] = {}
         self.load_all()
 
     def load_all(self) -> None:
-        """Load all word list files from data directory.
+        """Load word list files from data directory according to bank_name.
 
-        Expected files: words_gaokao.txt, words_cet4.txt, words_full.txt.
-        The active word list is determined by config; by default load all and merge.
+        If self.bank_name is None, load all .txt files in the directory.
+        Otherwise, load only the specified file.
         """
-        # For simplicity, we load the first found file (or all).
-        # In practice, the game will allow switching between banks.
-        # We'll implement merging all words from all files.
         all_words: List[str] = []
-        for filename in os.listdir(self.data_dir):
-            if filename.endswith(".txt"):
-                path = os.path.join(self.data_dir, filename)
-                with open(path, "r", encoding="utf-8") as f:
-                    for line in f:
-                        word = line.strip().lower()
-                        if word.isalpha():
-                            all_words.append(word)
+        if self.bank_name is None:
+            # Load all .txt files
+            for filename in os.listdir(self.data_dir):
+                if filename.endswith(".txt"):
+                    path = os.path.join(self.data_dir, filename)
+                    self._load_file(path, all_words)
+        else:
+            # Load only the specified bank file
+            path = os.path.join(self.data_dir, self.bank_name)
+            if os.path.exists(path):
+                self._load_file(path, all_words)
+            else:
+                # Fallback to loading all files if the specified file doesn't exist
+                import warnings
+
+                warnings.warn(
+                    f"Word bank file {self.bank_name} not found, loading all files."
+                )
+                for filename in os.listdir(self.data_dir):
+                    if filename.endswith(".txt"):
+                        path = os.path.join(self.data_dir, filename)
+                        self._load_file(path, all_words)
 
         self._build_index(all_words)
+
+    def _load_file(self, path: str, word_list: List[str]) -> None:
+        """Load words from a single file into word_list."""
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                for line in f:
+                    word = line.strip().lower()
+                    if word.isalpha():
+                        word_list.append(word)
+        except Exception as e:
+            import warnings
+
+            warnings.warn(f"Failed to load word bank file {path}: {e}")
 
     def _build_index(self, words: List[str]) -> None:
         """Build length and first‑letter index from a word list.
@@ -155,18 +182,38 @@ class WordBank:
 
 # Singleton instance
 _word_bank: Optional[WordBank] = None
+_current_bank_name: Optional[str] = None
 
 
-def get_word_bank(data_dir: str = "data") -> WordBank:
+def get_word_bank(data_dir: str = "data", bank_name: Optional[str] = None) -> WordBank:
     """Get the global word bank instance (singleton).
 
     Args:
         data_dir: Directory containing word lists.
+        bank_name: If provided, ensure the word bank is loaded from this specific file.
+            If None, use the previously loaded bank (or default to all files).
 
     Returns:
         WordBank instance.
     """
-    global _word_bank
-    if _word_bank is None:
-        _word_bank = WordBank(data_dir)
+    global _word_bank, _current_bank_name
+    if _word_bank is None or bank_name != _current_bank_name:
+        _word_bank = WordBank(data_dir, bank_name)
+        _current_bank_name = bank_name
+    return _word_bank
+
+
+def reload_word_bank(bank_name: Optional[str] = None, data_dir: str = "data") -> WordBank:
+    """Force‑reload the global word bank with a new bank name.
+
+    Args:
+        bank_name: If provided, load only this file; otherwise load all files.
+        data_dir: Directory containing word lists.
+
+    Returns:
+        Fresh WordBank instance.
+    """
+    global _word_bank, _current_bank_name
+    _word_bank = WordBank(data_dir, bank_name)
+    _current_bank_name = bank_name
     return _word_bank

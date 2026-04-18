@@ -7,6 +7,7 @@ from tkinter import messagebox
 from typing import Optional
 import json
 import os
+import logging
 
 from core.game_state import GameMode, GameState, PlayerType
 from core.game_controller import GameController, create_game_state
@@ -35,14 +36,16 @@ class MainWindow:
 
         # Load config
         self.config = self._load_config()
-        # Initialize word bank
-        self.word_bank = get_word_bank()
+        # Initialize word bank with configured bank name
+        self.word_bank = get_word_bank(bank_name=self.config.get("word_bank"))
         # Initialize AI player with config
         self.ai_player = AIPlayer(
             temperature=self.config.get("ai_temperature", 0.0),
             min_delay=self.config.get("ai_min_delay", 0.5),
             max_delay=self.config.get("ai_max_delay", 2.0),
         )
+        # Ensure AI player uses the same word bank instance
+        self.ai_player.word_bank = self.word_bank
         # Current game state and controller
         self.game_state: Optional[GameState] = None
         self.controller: Optional[GameController] = None
@@ -84,9 +87,11 @@ class MainWindow:
 
     def _save_config(self) -> None:
         """Save current configuration to config.json."""
+        logging.debug(f"Saving config: {self.config}")
         config_path = "config.json"
         with open(config_path, "w", encoding="utf-8") as f:
             json.dump(self.config, f, indent=2)
+        logging.debug("Config saved")
 
     def _setup_menus(self) -> None:
         """Create menu bar."""
@@ -115,6 +120,8 @@ class MainWindow:
             label="双人竞速对战",
             command=lambda: self.start_game(GameMode.VS_HUMAN_RACE),
         )
+        game_menu.add_separator()
+        game_menu.add_command(label="回到主页", command=self.show_home)
         game_menu.add_separator()
         game_menu.add_command(label="退出", command=self.root.quit)
 
@@ -190,6 +197,8 @@ class MainWindow:
 
     def _update_status(self, text: Optional[str] = None) -> None:
         """Update status bar text."""
+        if self.status_bar is None:
+            return
         if text is None:
             # Build status string from config
             length = self.config.get("word_length", "random")
@@ -198,26 +207,84 @@ class MainWindow:
             time_limit = self.config.get("time_limit", 60)
             text = f"词库: {bank} | 长度: {length} | 难度: {hard} | 限时: {time_limit}s"
         self.status_bar.config(text=text)
+        self.status_bar.update_idletasks()
 
     def open_settings(self) -> None:
         """Open settings dialog."""
-        dialog = SettingsDialog(self.root, self.config)
+        import sys
+
+        print("[DEBUG] open_settings called", file=sys.stderr)
+        sys.stderr.flush()
+        try:
+            dialog = SettingsDialog(self.root, self.config)
+            print("[DEBUG] SettingsDialog created", file=sys.stderr)
+            sys.stderr.flush()
+        except Exception as e:
+            print(f"[ERROR] Failed to create SettingsDialog: {e}", file=sys.stderr)
+            sys.stderr.flush()
+            return
+        # Wait for dialog to close
+        dialog.dialog.wait_window()
+        print("[DEBUG] dialog closed", file=sys.stderr)
+        sys.stderr.flush()
         if dialog.result:
+            # Debug log
+            print(
+                f"[DEBUG open_settings] dialog.result = {dialog.result}",
+                file=sys.stderr,
+            )
+            sys.stderr.flush()
+            # Remember old word bank to detect changes
+            old_bank = self.config.get("word_bank")
             # Update config
             for k, v in dialog.result.items():
                 self.config[k] = v
+            print(
+                f"[DEBUG open_settings] config after update = {self.config}",
+                file=sys.stderr,
+            )
+            sys.stderr.flush()
             self._save_config()
+            print("[DEBUG open_settings] config saved", file=sys.stderr)
+            sys.stderr.flush()
             self._update_status()
             # Update AI player parameters
             self.ai_player.temperature = self.config.get("ai_temperature", 0.0)
             self.ai_player.min_delay = self.config.get("ai_min_delay", 0.5)
             self.ai_player.max_delay = self.config.get("ai_max_delay", 2.0)
+            # Reload word bank if bank changed
+            new_bank = self.config.get("word_bank")
+            if new_bank != old_bank:
+                self.word_bank = get_word_bank(bank_name=new_bank)
+                self.ai_player.word_bank = self.word_bank
+            # Auto‑restart current game if one is active
+            if self.game_state is not None:
+                current_mode = self.game_state.mode
+                self.start_game(current_mode)
+        else:
+            print(
+                "[DEBUG open_settings] dialog.result is None (cancelled or closed)",
+                file=sys.stderr,
+            )
+            sys.stderr.flush()
 
     def reset_config(self) -> None:
         """Reset configuration to defaults."""
         self.config = self._load_config()  # reload defaults
         self._save_config()
+        print(f"[DEBUG open_settings] config after save = {self.config}")
         self._update_status()
+        # Reload word bank to reflect default bank
+        self.word_bank = get_word_bank(bank_name=self.config.get("word_bank"))
+        self.ai_player.word_bank = self.word_bank
+        # Update AI player parameters
+        self.ai_player.temperature = self.config.get("ai_temperature", 0.0)
+        self.ai_player.min_delay = self.config.get("ai_min_delay", 0.5)
+        self.ai_player.max_delay = self.config.get("ai_max_delay", 2.0)
+        # Auto‑restart current game if one is active
+        if self.game_state is not None:
+            current_mode = self.game_state.mode
+            self.start_game(current_mode)
         messagebox.showinfo("重置", "配置已恢复默认值")
 
     def show_rules(self) -> None:
@@ -275,6 +342,10 @@ Wordle Arena
             length = random.choice(available) if available else 5
         else:
             length = int(length_setting)
+        # Debug log
+        print(
+            f"[DEBUG] start_game: length_setting={length_setting}, chosen length={length}"
+        )
 
         # Choose target word
         first_letter = None
@@ -365,6 +436,59 @@ Wordle Arena
         # Show replay window for race modes
         if self.game_state and self.game_state.is_race():
             ReplayWindow(self.root, self.controller.get_replay_data())
+
+    def show_home(self) -> None:
+        """Return to home screen (clear game and show welcome)."""
+        # Stop any ongoing game
+        if self.controller:
+            self.controller.stop()
+            self.controller = None
+        # Clear game frame
+        if self.game_frame:
+            for widget in self.game_frame.winfo_children():
+                widget.destroy()
+            # Recreate welcome screen
+            welcome = tk.Label(
+                self.game_frame,
+                text="Wordle Arena",
+                font=("Arial", 24, "bold"),
+                fg="#2c3e50",
+                bg="#f0f0f0",
+            )
+            welcome.pack(pady=50)
+            subtitle = tk.Label(
+                self.game_frame,
+                text="请从菜单选择游戏模式开始",
+                font=("Arial", 14),
+                fg="#7f8c8d",
+                bg="#f0f0f0",
+            )
+            subtitle.pack(pady=10)
+            # Mode buttons (optional)
+            button_frame = tk.Frame(self.game_frame, bg="#f0f0f0")
+            button_frame.pack(pady=20)
+            modes = [
+                ("单人练习", GameMode.SINGLE),
+                ("人机回合", GameMode.VS_AI_TURN),
+                ("人机竞速", GameMode.VS_AI_RACE),
+                ("双人回合", GameMode.VS_HUMAN_TURN),
+                ("双人竞速", GameMode.VS_HUMAN_RACE),
+            ]
+            for text, mode in modes:
+                btn = tk.Button(
+                    button_frame,
+                    text=text,
+                    font=("Arial", 11),
+                    width=15,
+                    command=lambda m=mode: self.start_game(m),
+                )
+                btn.pack(side="left", padx=5, pady=5)
+        # Reset game state
+        self.game_state = None
+        self.current_board = None
+        self.race_board = None
+        # Update status bar to show config
+        self._update_status()
 
 
 def main() -> None:
