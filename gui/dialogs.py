@@ -44,7 +44,7 @@ class SettingsDialog:
         bank_combo = ttk.Combobox(
             main_frame,
             textvariable=self.bank_var,
-            values=["words_gaokao.txt", "words_cet4.txt", "words_full.txt"],
+            values=["words_gaokao.txt", "words_cet4.txt", "words_full.txt", "common_6000_words.txt"],
             state="readonly",
             width=25,
         )
