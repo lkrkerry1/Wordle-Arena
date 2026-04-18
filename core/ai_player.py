@@ -182,6 +182,10 @@ class AIPlayer:
         Returns:
             Guessed word.
         """
+        # 如果是首次猜测，忽略首字母提示
+        if previous_feedback is None or len(previous_feedback) == 0:
+            first_letter = None
+
         candidates = self.get_candidates(
             length, first_letter, hard_mode, previous_feedback
         )
