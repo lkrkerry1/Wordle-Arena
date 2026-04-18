@@ -108,6 +108,8 @@ class GameController:
                 feedback = get_feedback(guess, self.game_state.target_word)
                 self.game_state.add_guess(self.game_state.player2_id, guess, feedback)
                 self.on_state_change()
+                # Update AI's feedback memory
+                self.ai_player.race_feedback.append((guess, feedback))
                 # Check if AI just won
                 if self.game_state.game_over:
                     self.on_game_over()

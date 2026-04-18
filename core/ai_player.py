@@ -41,8 +41,9 @@ class AIPlayer:
         self.min_delay = min_delay
         self.max_delay = max_delay
         self.word_bank = get_word_bank()
-        self.candidate_cache: Dict[Tuple[int, ...], str] = {}
+        self.candidate_cache: Dict[Tuple[str, ...], str] = {}
         self._stop_thread = threading.Event()
+        self.race_feedback: List[Tuple[str, List[int]]] = []
 
     def stop(self) -> None:
         """Signal AI to stop any ongoing background guessing."""
@@ -57,7 +58,7 @@ class AIPlayer:
         length: int,
         first_letter: Optional[str] = None,
         hard_mode: bool = False,
-        previous_feedback: List[Tuple[str, List[int]]] = None,
+        previous_feedback: Optional[List[Tuple[str, List[int]]]] = None,
     ) -> List[str]:
         """Get candidate words that match current constraints.
 
@@ -79,6 +80,16 @@ class AIPlayer:
         if hard_mode and previous_feedback:
             # TODO: implement proper hard‑mode filtering
             pass
+        # Filter candidates based on previous feedback
+        if previous_feedback:
+            candidates = [
+                w
+                for w in candidates
+                if all(
+                    get_feedback_cached(guess, w) == tuple(fb)
+                    for guess, fb in previous_feedback
+                )
+            ]
         return candidates
 
     @staticmethod
@@ -158,7 +169,7 @@ class AIPlayer:
         length: int,
         first_letter: Optional[str] = None,
         hard_mode: bool = False,
-        previous_feedback: List[Tuple[str, List[int]]] = None,
+        previous_feedback: Optional[List[Tuple[str, List[int]]]] = None,
     ) -> str:
         """Make a guess given the current game state.
 
@@ -184,7 +195,7 @@ class AIPlayer:
         first_letter: Optional[str],
         hard_mode: bool,
         callback,
-        stop_event: threading.Event = None,
+        stop_event: Optional[threading.Event] = None,
     ) -> None:
         """Run AI guessing in race mode with delays.
 
@@ -201,16 +212,12 @@ class AIPlayer:
         """
         if stop_event is None:
             stop_event = self._stop_thread
-        previous_feedback: List[Tuple[str, List[int]]] = []
+        self.race_feedback.clear()
         while not stop_event.is_set():
-            guess = self.make_guess(length, first_letter, hard_mode, previous_feedback)
+            guess = self.make_guess(length, first_letter, hard_mode, self.race_feedback)
             callback(guess)
-            # Simulate receiving feedback (in race mode AI doesn't know answer)
-            # We cannot compute actual feedback because answer is hidden.
-            # Instead, the game controller will provide feedback later.
-            # For now we just store dummy feedback (all gray) as placeholder.
-            dummy_feedback = [0] * length
-            previous_feedback.append((guess, dummy_feedback))
+            # The callback should have updated self.race_feedback with actual feedback.
+            # If not, we keep previous feedback unchanged (no dummy feedback).
             # Random delay
             delay = random.uniform(self.min_delay, self.max_delay)
             time.sleep(delay)
