@@ -57,6 +57,8 @@ def get_word_bank_list() -> List[str]:
 
 # 初始化单词库
 word_bank = WordBank(data_dir="data", bank_name=WORD_BANK_NAME)
+# 全局完整词库，用于单词验证
+full_word_bank = WordBank(data_dir="data", bank_name="words_full.txt")
 
 # 游戏会话存储
 sessions: Dict[str, Dict[str, Any]] = {}
@@ -87,13 +89,19 @@ def create_game_session(
         raise ValueError(f"No word of length {length} with first letter {first_letter}")
     target_word = random.choice(candidates)
 
+    # 根据模式决定最大尝试次数
+    if mode.is_turn_based():
+        max_attempts = 9999  # 轮流模式下无限制
+    else:
+        max_attempts = length + 1
+
     # 创建游戏状态
     game_state = GameState(
         mode=mode,
         target_word=target_word,
         target_length=length,
         first_letter=target_word[0],
-        max_attempts=length + 1,
+        max_attempts=max_attempts,
         hard_mode=hard_mode,
         time_limit=0.0,  # 暂无时间限制
     )
@@ -106,6 +114,7 @@ def create_game_session(
             min_delay=ai_min_delay,
             max_delay=ai_max_delay,
         )
+        ai_player.word_bank = game_word_bank
     else:
         ai_player = None
 
@@ -215,6 +224,8 @@ def get_game_state(session_id: str):
         "attempts_used": len(game_state.guesses),
         "attempts_left": game_state.max_attempts - len(game_state.guesses),
     }
+    if game_state.game_over:
+        response["target_word"] = game_state.target_word
     return jsonify(response), 200
 
 
@@ -242,10 +253,13 @@ def submit_guess(session_id: str):
             {"error": f"Guess must be {game_state.target_length} letters long"}
         ), 400
 
-    # 使用会话的词库（若不存在则回退到全局词库）
-    session_word_bank = session.get("word_bank", word_bank)
-    if guess not in session_word_bank.word_sets_set.get(game_state.target_length, set()):
+    # 使用全局完整词库进行单词验证（无论玩家选择哪个词库）
+    if guess not in full_word_bank.word_sets_set.get(game_state.target_length, set()):
         return jsonify({"error": "Word not in dictionary"}), 400
+
+    # 检查是否已经猜测过该单词（任何玩家）
+    if any(g.guess == guess for g in game_state.guesses):
+        return jsonify({"error": "Word already guessed"}), 400
 
     # 计算反馈
     feedback = get_feedback(guess, game_state.target_word)
@@ -277,14 +291,15 @@ def submit_guess(session_id: str):
 
     # 触发状态变更回调（暂无）
 
-    return jsonify(
-        {
-            "feedback": feedback,
-            "game_over": game_state.game_over,
-            "winner": game_state.winner,
-            "current_player": game_state.current_player,
-        }
-    ), 200
+    response = {
+        "feedback": feedback,
+        "game_over": game_state.game_over,
+        "winner": game_state.winner,
+        "current_player": game_state.current_player,
+    }
+    if game_state.game_over:
+        response["target_word"] = game_state.target_word
+    return jsonify(response), 200
 
 
 @app.route("/api/game/<session_id>/ai_turn", methods=["POST"])
@@ -315,6 +330,9 @@ def ai_turn(session_id: str):
         hard_mode=game_state.hard_mode,
         previous_feedback=[(g.guess, g.feedback) for g in game_state.guesses],
     )
+    # 排除已经猜测过的单词
+    guessed_words = {g.guess for g in game_state.guesses}
+    candidates = [c for c in candidates if c not in guessed_words]
     if not candidates:
         guess = "?" * game_state.target_length
     else:
@@ -341,15 +359,16 @@ def ai_turn(session_id: str):
     else:
         game_state.current_player = "player1"
 
-    return jsonify(
-        {
-            "guess": guess,
-            "feedback": feedback,
-            "game_over": game_state.game_over,
-            "winner": game_state.winner,
-            "current_player": game_state.current_player,
-        }
-    ), 200
+    response = {
+        "guess": guess,
+        "feedback": feedback,
+        "game_over": game_state.game_over,
+        "winner": game_state.winner,
+        "current_player": game_state.current_player,
+    }
+    if game_state.game_over:
+        response["target_word"] = game_state.target_word
+    return jsonify(response), 200
 
 
 @app.route("/api/wordbanks", methods=["GET"])

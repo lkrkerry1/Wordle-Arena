@@ -399,6 +399,7 @@
         let currentSession = null;
         let wordLength = 5;
         let gameOver = false;
+        let aiTurnPending = false;
 
         const API_BASE = window.location.origin; // Same origin
 
@@ -458,7 +459,9 @@
             document.getElementById('statusMode').textContent = gameState.mode;
             document.getElementById('statusLength').textContent = gameState.target_length;
             document.getElementById('statusAttempts').textContent = gameState.attempts_used;
-            document.getElementById('statusRemaining').textContent = gameState.attempts_left;
+            // Display ∞ for turn‑based modes (no attempt limit)
+            const remainingDisplay = gameState.mode.includes('_turn') ? '∞' : gameState.attempts_left;
+            document.getElementById('statusRemaining').textContent = remainingDisplay;
             wordLength = gameState.target_length;
             gameOver = gameState.game_over;
 
@@ -469,15 +472,16 @@
             if (gameOver) {
                 guessInput.disabled = true;
                 submitBtn.disabled = true;
-                addMessage(`Game over! ${gameState.winner ? 'Winner: ' + gameState.winner : 'No winner.'}`, 'info');
+                if (gameState.target_word) {
+                    addMessage(`Game over! ${gameState.winner ? 'Winner: ' + gameState.winner : 'No winner.'} The correct word was: ${gameState.target_word}.`, 'info');
+                } else {
+                    addMessage(`Game over! ${gameState.winner ? 'Winner: ' + gameState.winner : 'No winner.'}`, 'info');
+                }
             } else {
                 guessInput.disabled = false;
                 submitBtn.disabled = false;
-                if (gameState.mode === 'vs_ai_turn' && gameState.current_player === 'player2') {
-                    aiTurnSection.classList.remove('hidden');
-                } else {
-                    aiTurnSection.classList.add('hidden');
-                }
+                // AI turn section hidden; AI will automatically act when it's its turn
+                aiTurnSection.classList.add('hidden');
             }
         }
 
@@ -564,6 +568,12 @@
                 updateStatus(gameState);
                 // Update guess input max length
                 document.getElementById('guessInput').maxLength = gameState.target_length;
+
+                // Auto‑trigger AI turn if it's AI's turn in vs_ai_turn mode
+                if (!gameOver && gameState.mode === 'vs_ai_turn' && gameState.current_player === 'player2' && !aiTurnPending) {
+                    aiTurnPending = true;
+                    setTimeout(() => aiTurn(), 500); // slight delay for UX
+                }
             } catch (error) {
                 addMessage(`Error fetching game state: ${error.message}`, 'error');
             }
@@ -595,7 +605,11 @@
                 guessInput.value = '';
                 await fetchGameState();
                 if (result.game_over) {
-                    addMessage(`Game over! Winner: ${result.winner || 'none'}`, 'success');
+                    if (result.target_word) {
+                        addMessage(`Game over! Winner: ${result.winner || 'none'}. The correct word was: ${result.target_word}.`, 'success');
+                    } else {
+                        addMessage(`Game over! Winner: ${result.winner || 'none'}`, 'success');
+                    }
                 }
             } catch (error) {
                 addMessage(`Error: ${error.message}`, 'error');
@@ -616,9 +630,14 @@
                 }
                 const result = await response.json();
                 addMessage(`AI guessed: ${result.guess}`, 'info');
+                if (result.game_over && result.target_word) {
+                    addMessage(`Game over! Winner: ${result.winner || 'none'}. The correct word was: ${result.target_word}.`, 'success');
+                }
                 await fetchGameState();
             } catch (error) {
                 addMessage(`Error: ${error.message}`, 'error');
+            } finally {
+                aiTurnPending = false;
             }
         }
 

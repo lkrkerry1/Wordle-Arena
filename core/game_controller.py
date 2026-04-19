@@ -240,8 +240,8 @@ def create_game_state(
     length = len(target_word)
     first_letter = target_word[0]
     if mode.is_turn_based():
-        # 轮流模式下无尝试次数限制，但棋盘需要预分配行数，设为较大值
-        max_attempts = length + 50
+        # 轮流模式下无尝试次数限制，设为极大值（近似无限）
+        max_attempts = 9999
     else:
         max_attempts = length + 1
     player_types = {"player1": player1_type, "player2": player2_type}
