@@ -302,9 +302,9 @@
                             <select id="mode">
                                 <option value="single">Single Player (Practice)</option>
                                 <option value="vs_ai_turn">Turn‑based vs AI</option>
-                                <option value="vs_ai_race" disabled>Race vs AI (Coming Soon)</option>
-                                <option value="vs_human_turn" disabled>Two‑Player Turn‑based (Coming Soon)</option>
-                                <option value="vs_human_race" disabled>Two‑Player Race (Coming Soon)</option>
+                                <option value="vs_ai_race">Race vs AI</option>
+                                <option value="vs_human_turn">Two‑Player Turn‑based</option>
+                                <option value="vs_human_race">Two‑Player Race</option>
                             </select>
                         </div>
                         <div class="form-group">
@@ -368,6 +368,10 @@
                                 <div class="info-label">Remaining</div>
                                 <div class="info-value" id="statusRemaining">-</div>
                             </div>
+                            <div class="info-item">
+                                <div class="info-label">Opponent Attempts</div>
+                                <div class="info-value" id="statusOpponentAttempts">-</div>
+                            </div>
                         </div>
                         <div class="messages" id="messages">
                             <div class="message info">Start a new game to play.</div>
@@ -400,6 +404,19 @@
         let wordLength = 5;
         let gameOver = false;
         let aiTurnPending = false;
+        let currentPlayer = 'player1'; // 默认玩家1
+        let racePollTimer = null;
+        let gameOverMessageShown = false;
+
+        // 从URL获取玩家参数
+        function getUrlParam(name) {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get(name);
+        }
+        const playerParam = getUrlParam('player');
+        if (playerParam === 'player1' || playerParam === 'player2') {
+            currentPlayer = playerParam;
+        }
 
         const API_BASE = window.location.origin; // Same origin
 
@@ -462,8 +479,18 @@
             // Display ∞ for turn‑based modes (no attempt limit)
             const remainingDisplay = gameState.mode.includes('_turn') ? '∞' : gameState.attempts_left;
             document.getElementById('statusRemaining').textContent = remainingDisplay;
+            // Opponent attempts
+            const opponentAttempts = gameState.opponent_attempts !== undefined ? gameState.opponent_attempts : '-';
+            document.getElementById('statusOpponentAttempts').textContent = opponentAttempts;
+
             wordLength = gameState.target_length;
             gameOver = gameState.game_over;
+
+            // 清除竞速轮询定时器（如果游戏结束）
+            if (gameOver && racePollTimer) {
+                clearTimeout(racePollTimer);
+                racePollTimer = null;
+            }
 
             // Enable/disable input
             const guessInput = document.getElementById('guessInput');
@@ -472,11 +499,55 @@
             if (gameOver) {
                 guessInput.disabled = true;
                 submitBtn.disabled = true;
-                if (gameState.target_word) {
-                    addMessage(`Game over! ${gameState.winner ? 'Winner: ' + gameState.winner : 'No winner.'} The correct word was: ${gameState.target_word}.`, 'info');
-                } else {
-                    addMessage(`Game over! ${gameState.winner ? 'Winner: ' + gameState.winner : 'No winner.'}`, 'info');
+                // 游戏结束消息只显示一次
+                if (!gameOverMessageShown) {
+                    if (gameState.target_word) {
+                        addMessage(`Game over! ${gameState.winner ? 'Winner: ' + gameState.winner : 'No winner.'} The correct word was: ${gameState.target_word}.`, 'info');
+                    } else {
+                        addMessage(`Game over! ${gameState.winner ? 'Winner: ' + gameState.winner : 'No winner.'}`, 'info');
+                    }
+                    gameOverMessageShown = true;
                 }
+                // 显示对手猜测过程（如果有）
+                // 移除之前可能已经添加的对手板和重开按钮
+                const existingOpponentBoard = document.getElementById('opponent-board');
+                if (existingOpponentBoard) existingOpponentBoard.remove();
+                const existingRestartBtn = document.getElementById('restart-button');
+                if (existingRestartBtn) existingRestartBtn.remove();
+
+                if (gameState.opponent_guesses && gameState.opponent_guesses.length > 0) {
+                    addMessage('对手猜测过程：', 'info');
+                    const opponentBoard = document.createElement('div');
+                    opponentBoard.id = 'opponent-board';
+                    opponentBoard.className = 'opponent-board';
+                    gameState.opponent_guesses.forEach(guess => {
+                        const row = document.createElement('div');
+                        row.className = 'guess-row';
+                        for (let i = 0; i < guess.guess.length; i++) {
+                            const cell = document.createElement('div');
+                            cell.className = 'letter-cell';
+                            cell.textContent = guess.guess[i].toUpperCase();
+                            // 根据反馈着色（如果有反馈）
+                            if (guess.feedback && guess.feedback[i] === 2) {
+                                cell.classList.add('correct');
+                            } else if (guess.feedback && guess.feedback[i] === 1) {
+                                cell.classList.add('present');
+                            } else if (guess.feedback && guess.feedback[i] === 0) {
+                                cell.classList.add('absent');
+                            }
+                            row.appendChild(cell);
+                        }
+                        opponentBoard.appendChild(row);
+                    });
+                    document.getElementById('messages').appendChild(opponentBoard);
+                }
+                // 添加重开按钮
+                const restartBtn = document.createElement('button');
+                restartBtn.id = 'restart-button';
+                restartBtn.textContent = 'Restart Same Settings';
+                restartBtn.onclick = startNewGame;
+                restartBtn.style.marginTop = '10px';
+                document.getElementById('messages').appendChild(restartBtn);
             } else {
                 guessInput.disabled = false;
                 submitBtn.disabled = false;
@@ -496,6 +567,12 @@
             const aiMaxDelay = parseFloat(document.getElementById('aiMaxDelay').value);
 
             clearMessages();
+            // 清除竞速轮询定时器
+            if (racePollTimer) {
+                clearTimeout(racePollTimer);
+                racePollTimer = null;
+            }
+            gameOverMessageShown = false;
             addMessage('Creating new game...', 'info');
 
             try {
@@ -559,7 +636,8 @@
         async function fetchGameState() {
             if (!currentSession) return;
             try {
-                const response = await fetch(`${API_BASE}/api/game/${currentSession}`);
+                const url = `${API_BASE}/api/game/${currentSession}?player=${currentPlayer}`;
+                const response = await fetch(url);
                 if (!response.ok) {
                     throw new Error('Game session not found');
                 }
@@ -574,12 +652,28 @@
                     aiTurnPending = true;
                     setTimeout(() => aiTurn(), 500); // slight delay for UX
                 }
+
+                // 竞速模式轮询：如果游戏未结束且是竞速模式，2秒后再次获取状态
+                if (!gameState.game_over && (gameState.mode === 'vs_ai_race' || gameState.mode === 'vs_human_race')) {
+                    if (racePollTimer) clearTimeout(racePollTimer);
+                    racePollTimer = setTimeout(fetchGameState, 2000);
+                } else {
+                    // 游戏结束或非竞速模式，清除轮询定时器
+                    if (racePollTimer) {
+                        clearTimeout(racePollTimer);
+                        racePollTimer = null;
+                    }
+                }
             } catch (error) {
                 addMessage(`Error fetching game state: ${error.message}`, 'error');
             }
         }
 
         async function submitGuess() {
+            if (gameOver) {
+                addMessage('Game is already over', 'error');
+                return;
+            }
             const guessInput = document.getElementById('guessInput');
             const guess = guessInput.value.trim().toLowerCase();
             if (!guess || guess.length !== wordLength) {
@@ -595,7 +689,7 @@
                 const response = await fetch(`${API_BASE}/api/game/${currentSession}/guess`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ guess })
+                    body: JSON.stringify({ guess, player_id: currentPlayer })
                 });
                 if (!response.ok) {
                     const err = await response.json();

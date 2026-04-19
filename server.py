@@ -107,7 +107,7 @@ def create_game_session(
     )
 
     # 根据模式设置玩家类型
-    if mode == GameMode.VS_AI_TURN:
+    if mode in (GameMode.VS_AI_TURN, GameMode.VS_AI_RACE):
         game_state.player_types["player2"] = PlayerType.AI
         ai_player = AIPlayer(
             temperature=ai_temperature,
@@ -117,6 +117,9 @@ def create_game_session(
         ai_player.word_bank = game_word_bank
     else:
         ai_player = None
+        # 确保玩家2是人类（对于人类对局模式）
+        if mode in (GameMode.VS_HUMAN_TURN, GameMode.VS_HUMAN_RACE):
+            game_state.player_types["player2"] = PlayerType.HUMAN
 
     # 创建游戏控制器
     controller = GameController(
@@ -202,14 +205,14 @@ def get_game_state(session_id: str):
         return jsonify({"error": "Game session not found"}), 404
 
     game_state = session["game_state"]
-    # 构建响应
-    response = {
-        "mode": game_state.mode.value,
-        "target_length": game_state.target_length,
-        "first_letter": game_state.first_letter,
-        "max_attempts": game_state.max_attempts,
-        "hard_mode": game_state.hard_mode,
-        "guesses": [
+    player = request.args.get("player")
+
+    # 确定玩家ID和对手ID
+    if player in ("player1", "player2"):
+        player_id = player
+        opponent_id = "player2" if player_id == "player1" else "player1"
+        # 过滤猜测记录
+        player_guesses = [
             {
                 "player_id": g.player_id,
                 "guess": g.guess,
@@ -217,13 +220,62 @@ def get_game_state(session_id: str):
                 "timestamp": g.timestamp,
             }
             for g in game_state.guesses
-        ],
+            if g.player_id == player_id
+        ]
+        opponent_guesses = [
+            {
+                "player_id": g.player_id,
+                "guess": g.guess,
+                "feedback": g.feedback,
+                "timestamp": g.timestamp,
+            }
+            for g in game_state.guesses
+            if g.player_id == opponent_id
+        ]
+        # 在游戏未结束时，隐藏对手的猜测内容
+        if not game_state.game_over:
+            opponent_guesses = []
+        guesses = player_guesses
+        opponent_attempts = (
+            len(opponent_guesses)
+            if game_state.game_over
+            else len([g for g in game_state.guesses if g.player_id == opponent_id])
+        )
+    else:
+        # 未指定玩家，返回全部猜测（兼容旧版）
+        player_id = None
+        opponent_id = None
+        guesses = [
+            {
+                "player_id": g.player_id,
+                "guess": g.guess,
+                "feedback": g.feedback,
+                "timestamp": g.timestamp,
+            }
+            for g in game_state.guesses
+        ]
+        opponent_attempts = None
+        opponent_guesses = []
+
+    # 构建响应
+    response = {
+        "mode": game_state.mode.value,
+        "target_length": game_state.target_length,
+        "first_letter": game_state.first_letter,
+        "max_attempts": game_state.max_attempts,
+        "hard_mode": game_state.hard_mode,
+        "guesses": guesses,
         "current_player": game_state.current_player,
         "game_over": game_state.game_over,
         "winner": game_state.winner,
         "attempts_used": len(game_state.guesses),
         "attempts_left": game_state.max_attempts - len(game_state.guesses),
     }
+    if player_id is not None:
+        response["player"] = player_id
+        response["opponent_attempts"] = opponent_attempts
+        if game_state.game_over:
+            response["opponent_guesses"] = opponent_guesses
     if game_state.game_over:
         response["target_word"] = game_state.target_word
     return jsonify(response), 200
@@ -246,6 +298,9 @@ def submit_guess(session_id: str):
     guess = data.get("guess", "").strip().lower()
     if not guess.isalpha():
         return jsonify({"error": "Guess must be alphabetic"}), 400
+    player_id = data.get("player_id", game_state.current_player)
+    if player_id not in ("player1", "player2"):
+        return jsonify({"error": "Invalid player_id"}), 400
 
     # 检查单词长度
     if len(guess) != game_state.target_length:
@@ -267,15 +322,13 @@ def submit_guess(session_id: str):
     # 添加到猜测记录
     from core.game_state import GuessEntry
 
-    guess_entry = GuessEntry(
-        player_id=game_state.current_player, guess=guess, feedback=feedback
-    )
+    guess_entry = GuessEntry(player_id=player_id, guess=guess, feedback=feedback)
     game_state.guesses.append(guess_entry)
 
     # 检查游戏是否结束
     if guess == game_state.target_word:
         game_state.game_over = True
-        game_state.winner = game_state.current_player
+        game_state.winner = player_id
         controller.stop()
     elif len(game_state.guesses) >= game_state.max_attempts:
         game_state.game_over = True
