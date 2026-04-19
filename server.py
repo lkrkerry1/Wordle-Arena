@@ -4,24 +4,25 @@ Wordle Arena - 服务端版本
 在本地运行一个网页游戏服务器。
 """
 
-import os
-import sys
 import json
+import os
 import random
-import uuid
+import sys
 import threading
 import time
-from typing import Dict, Optional, Any, List
+import uuid
+from typing import Any, Dict, List, Optional
 
 # 确保项目根目录在 sys.path 中
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from flask import Flask, request, jsonify, send_from_directory
-from core.game_state import GameState, GameMode, PlayerType
-from core.game_controller import GameController
+from flask import Flask, jsonify, request, send_from_directory
+
 from core.ai_player import AIPlayer
-from core.word_bank import WordBank
 from core.feedback import get_feedback
+from core.game_controller import GameController
+from core.game_state import GameMode, GameState, PlayerType
+from core.word_bank import WordBank
 
 # 初始化 Flask 应用
 app = Flask(__name__, static_folder=None)
@@ -233,9 +234,21 @@ def get_game_state(session_id: str):
             if g.player_id == opponent_id
         ]
         # 在游戏未结束时，隐藏对手的猜测内容
-        if not game_state.game_over:
+        if not game_state.game_over and game_state.mode != GameMode.VS_AI_TURN:
             opponent_guesses = []
-        guesses = player_guesses
+        # 在VS_AI_TURN模式下，始终显示所有猜测
+        if game_state.mode == GameMode.VS_AI_TURN:
+            guesses = [
+                {
+                    "player_id": g.player_id,
+                    "guess": g.guess,
+                    "feedback": g.feedback,
+                    "timestamp": g.timestamp,
+                }
+                for g in game_state.guesses
+            ]
+        else:
+            guesses = player_guesses
         opponent_attempts = (
             len(opponent_guesses)
             if game_state.game_over
@@ -434,6 +447,8 @@ def list_word_banks():
 if __name__ == "__main__":
     import time
 
-    print("Starting Wordle Arena server on http://localhost:5000")
+    print(
+        "Starting Wordle Arena server on http://localhost:5000 (IPv4) and http://[::]:5000 (IPv6)"
+    )
     print("Press Ctrl+C to stop")
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    app.run(host="::", port=5000, debug=True)
