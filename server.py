@@ -451,4 +451,4 @@ if __name__ == "__main__":
         "Starting Wordle Arena server on http://localhost:5000 (IPv4) and http://[::]:5000 (IPv6)"
     )
     print("Press Ctrl+C to stop")
-    app.run(host="::", port=5000, debug=True)
+    app.run(host="::", port=5000, debug=False)
