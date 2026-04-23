@@ -24,6 +24,7 @@ from core.game_controller import GameController
 from core.game_state import GameMode, GameState, PlayerType
 from core.word_bank import WordBank
 
+print("Starting...", flush=True)
 # 初始化 Flask 应用
 app = Flask(__name__, static_folder=None)
 
