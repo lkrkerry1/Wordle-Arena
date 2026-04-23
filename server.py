@@ -446,6 +446,7 @@ def list_word_banks():
 
 
 if __name__ == "__main__":
+    import os
     import time
 
     from waitress import serve
@@ -454,4 +455,4 @@ if __name__ == "__main__":
         "Starting Wordle Arena server on http://localhost:5000 (IPv4) and http://[::]:5000 (IPv6)"
     )
     print("Press Ctrl+C to stop")
-    serve(app, host="::", port=5000)
+    serve(app, host="::", port=int(os.getenv("PORT", 5000)))
