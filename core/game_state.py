@@ -123,8 +123,27 @@ class GameState:
         if all(f == 2 for f in feedback):
             self.winner = player_id
             self.game_over = True
-        elif not self.mode.is_turn_based() and self.attempts_used >= self.max_attempts:
-            self.game_over = True
+            return
+        
+        # Determine if the game should end due to attempt limits
+        if self.mode.is_race():
+            # Race mode: each player has independent attempt limit
+            player_attempts = len([g for g in self.guesses if g.player_id == player_id])
+            if player_attempts >= self.max_attempts:
+                # This player has exhausted their attempts
+                opponent = self.player2_id if player_id == self.player1_id else self.player1_id
+                opponent_attempts = len([g for g in self.guesses if g.player_id == opponent])
+                if opponent_attempts >= self.max_attempts:
+                    # Both exhausted, tie
+                    self.winner = None
+                else:
+                    self.winner = opponent
+                self.game_over = True
+                return
+        elif not self.mode.is_turn_based():
+            # Non‑race, non‑turn‑based (single player): total attempts limit
+            if self.attempts_used >= self.max_attempts:
+                self.game_over = True
 
     def get_player_guesses(self, player_id: str) -> List[GuessEntry]:
         """Return all guesses made by a specific player.

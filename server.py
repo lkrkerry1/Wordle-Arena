@@ -270,6 +270,14 @@ def get_game_state(session_id: str):
         opponent_attempts = None
         opponent_guesses = []
 
+    # 计算 attempts_used 和 attempts_left
+    if player_id is not None:
+        attempts_used = len([g for g in game_state.guesses if g.player_id == player_id])
+        attempts_left = game_state.max_attempts - attempts_used
+    else:
+        attempts_used = len(game_state.guesses)
+        attempts_left = game_state.max_attempts - attempts_used
+
     # 构建响应
     response = {
         "mode": game_state.mode.value,
@@ -281,8 +289,8 @@ def get_game_state(session_id: str):
         "current_player": game_state.current_player,
         "game_over": game_state.game_over,
         "winner": game_state.winner,
-        "attempts_used": len(game_state.guesses),
-        "attempts_left": game_state.max_attempts - len(game_state.guesses),
+        "attempts_used": attempts_used,
+        "attempts_left": attempts_left,
     }
     if player_id is not None:
         response["player"] = player_id
@@ -333,19 +341,12 @@ def submit_guess(session_id: str):
     feedback = get_feedback(guess, game_state.target_word)
 
     # 添加到猜测记录
-    from core.game_state import GuessEntry
 
-    guess_entry = GuessEntry(player_id=player_id, guess=guess, feedback=feedback)
-    game_state.guesses.append(guess_entry)
+    feedback = get_feedback(guess, game_state.target_word)
+    game_state.add_guess(player_id, guess, feedback)
 
     # 检查游戏是否结束
-    if guess == game_state.target_word:
-        game_state.game_over = True
-        game_state.winner = player_id
-        controller.stop()
-    elif len(game_state.guesses) >= game_state.max_attempts:
-        game_state.game_over = True
-        game_state.winner = None
+    if game_state.game_over:
         controller.stop()
     else:
         # 切换玩家（如果是双人模式）

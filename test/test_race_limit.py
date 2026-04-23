@@ -17,26 +17,25 @@ def test_race_no_limit():
     print(f"初始 max_attempts: {state.max_attempts}")
     print(f"模式是 race: {state.mode.is_race()}")
 
-    # 模拟多次错误猜测
-    for i in range(state.max_attempts + 5):  # 超过 max_attempts
-        guess = "wrong"  # 肯定不是 apple
-        feedback = [0, 0, 0, 0, 0]  # 全部错误
+    # 模拟玩家1多次错误猜测，达到 max_attempts 次
+    for i in range(state.max_attempts):
+        guess = "wrong"
+        feedback = [0, 0, 0, 0, 0]
         state.add_guess("player1", guess, feedback)
-        print(
-            f"猜测 {i + 1} 后, game_over={state.game_over}, attempts_used={state.attempts_used}, max_attempts={state.max_attempts}"
-        )
+        print(f"猜测 {i + 1} 后, game_over={state.game_over}")
         if state.game_over:
-            print(f"游戏意外结束！winner={state.winner}")
             break
-    # 预期游戏没有结束
-    assert not state.game_over, f"游戏不应在 {state.attempts_used} 次猜测后结束"
-    print("✓ 游戏未因尝试次数用尽而结束")
+    # 预期游戏结束，因为玩家1用尽了尝试次数
+    assert state.game_over, f"游戏应在 {state.max_attempts} 次猜测后结束"
+    assert state.winner == "player2", f"赢家应为 player2，实际为 {state.winner}"
+    print("✓ 玩家1尝试次数用尽，玩家2获胜")
 
-    # 现在模拟猜中
+    # 现在测试猜中场景（需要重置状态）
+    state2 = create_game_state(mode=mode, target_word=target_word)
     feedback = [2, 2, 2, 2, 2]
-    state.add_guess("player1", target_word, feedback)
-    assert state.game_over
-    assert state.winner == "player1"
+    state2.add_guess("player1", target_word, feedback)
+    assert state2.game_over
+    assert state2.winner == "player1"
     print("✓ 猜中后游戏正确结束")
 
     print("所有测试通过")

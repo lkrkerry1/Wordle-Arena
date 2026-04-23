@@ -144,7 +144,7 @@ class RaceBoard(tk.Frame):
 
         # Status label
         if self.game_state.mode.is_race():
-            status_text = f"单词长度: {self.length} | 无限尝试"
+            status_text = f"单词长度: {self.length} | 最大尝试: {self.max_attempts} (每个玩家)"
         else:
             status_text = f"单词长度: {self.length} | 最大尝试: {self.max_attempts}"
         self.status_label = tk.Label(
